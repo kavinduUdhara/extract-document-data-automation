@@ -154,15 +154,268 @@ class DocumentDataExtractor:
                            custom_prompt: Optional[str] = None,
                            use_google_ai: bool = False) -> pd.DataFrame:
         """
-        Process extracted data and generate structured CSV data.
-        
-        Args:
-            extracted_data (List[Dict[str, Any]]): Extracted document data
-            custom_prompt (Optional[str]): Custom prompt for AI processing
-            use_google_ai (bool): Whether to use Google AI Studio for additional processing
-            
-        Returns:
-            pd.DataFrame: Structured data ready for CSV export
+        You will be given official resort documents one by one. There are usually 3–6 documents per resort.
+
+There are two types of documents:
+
+Main Contract – Contains the core resort information, room details, meal plans, transfers, and general policies.
+
+Package Document(s) – Contain special promotional packages and exclusive offers. These are only available to us and will be highlighted on our platform. This is the primary source for package details and rates.
+
+🟡 Document Handling Rules
+Wait until I say: “Let’s structure this resort” — only then should you extract and structure the data.
+
+Do not summarize, reword, or paraphrase — extract all content exactly as written.
+
+Maintain correct casing and punctuation from the documents.
+
+If information is missing, mark it as: Not specified.
+
+All data must be presented section by section, exactly in the format and field naming below.
+
+Do not generate the CSV until I say: “Provide CSV”.
+Once I say that, then:
+
+Then break the message clearly with something like:
+➡️ Now Generating CSV...
+
+Then generate the CSV based on the structured data.
+
+Each CSV section should be separate, as follows:
+
+1. Resort_Details.csv – one row per resort.
+2. Villas_Rooms.csv – one row per villa/room per resort.
+3. Meal_Plans.csv – one row per meal plan per resort.
+4. Transfers.csv – one row per transfer per resort.
+5. Packages.csv – one row per package per resort.
+6. Room_Rates.csv – one row per rate entry per room per resort.
+
+🧾 Resort Data Format to Follow
+1. 🏝 RESORT DETAILS
+Resort Name: (ALL CAPS. If it’s a package, append ‘- PACKAGE’. Shorten only if it exceeds 40 characters.)
+
+Resort Legal Name: (CamelCase)
+
+Atoll:
+
+Star Category:
+
+Offer Type: (Keep this field for all resorts)
+
+Resort Category: (Island Resort / City Hotel / Guest House)
+
+Board Type: (Select the lowest meal board type provided by the resort, in this order. If not found, write 'Not specified')
+
+markdown
+Copy
+Edit
+1. Bed and breakfast (B/B)  
+2. Half board (H/B)  
+3. HB plus  
+4. Full board (F/B)  
+5. Fb plus  
+6. Soft All Inclusive  
+7. Basic All Inclusive  
+8. Classic All Inclusive  
+9. Al Gold  
+10. Al plus  
+11. Premium All Inclusive  
+12. Platinum All Inclusive  
+13. Deluxe all inclusive  
+14. Extreme all inclusive  
+15. Serenity plan  
+16. Reserve plan  
+17. Lobi plan  
+18. Velassaru Indulgence  
+19. The Milaidhoo Gourmet Plan  
+20. Pure indulgence  
+21. Indulgence plan  
+22. Varu plan  
+23. Kanifushi plan  
+24. Fushi Plan  
+25. RAAYA Plan  
+26. Experience  
+27. Anything Anytime Anywhere  
+Marketplace: (Select from: Australia, Eastern Europe / CIS, Europe, Russia, Middle East, Africa, Asia, South America. If only a region is mentioned, assign ‘All’ countries under that region. If specific countries are listed, mention them.)
+
+Booking Period - From: (Format: DD/MM/YYYY)
+
+Booking Period - To: (Format: DD/MM/YYYY)
+
+Age Definition:
+
+Teenage From Age:
+
+Child From Age: (If Infants are 0–1.99, Child From Age should be 2)
+
+Early Check-In Cost: 0
+
+Late Check-Out Cost: 0
+
+Resort Details (Intro): (Limit to 3000 characters. Remove unnecessary repetition or generic text if longer.)
+
+Resort Terms and Conditions: (Limit to 3000 characters)
+
+Resort Cancellation Policy: (Limit to 3000 characters)
+
+Other Additional Information:
+
+2. 🛏 ROOM / VILLA DETAILS
+(Repeat for each room/villa)
+
+Resort Name:
+
+Room Type:
+
+No of Rooms / Villas:
+
+Room / Villa Category:
+
+Basic Occupancy Count:
+
+Adult:
+
+Teenage:
+
+Child:
+
+Maximum Occupancy (Including Basic):
+
+Room Size (sqm):
+
+Minimum Stay (Nights):
+
+Bed Type:
+
+Bed Count:
+
+Room / Villa Description:
+
+Facilities Provided:
+
+Room Terms and Conditions:
+
+3. 🍽 MEAL PLAN
+(Repeat for each meal plan)
+
+Resort Name:
+
+Meal Plan:
+
+Cost for Adult:
+
+Cost for Child:
+
+Meal Plan Inclusion Details:
+
+If Included in a Package: (Mention package names or 'Not included')
+
+4. 🚤 TRANSFER DETAILS
+(Repeat for each transfer type)
+
+Resort Name:
+
+Transfer Name:
+
+Transfer Type: (Select from options like Shared Seaplane, Private Luxury Yacht, etc.)
+
+Valid Travel - From:
+
+Valid Travel - To:
+
+Transfer Cost:
+
+Adult:
+
+Child:
+
+Included in Package(s):
+
+Transfer Terms and Conditions:
+
+5. 🎁 PACKAGE DETAILS
+(Repeat for each package)
+
+Resort Name:
+
+Package Name:
+
+Package Inclusion:
+
+Apply Countries:
+
+Package Period - From:
+
+Package Period - To:
+
+Booking Period - From:
+
+Booking Period - To:
+
+Blackout Periods:
+
+Villa / Room Type:
+
+Stay Duration (Nights):
+
+Basic Occupancy Count:
+
+Adult:
+
+Teenage:
+
+Child:
+
+Maximum Occupancy (Including Basic):
+
+Meal Plan:
+
+Transfer:
+
+Package Cost: (State per room or per person)
+
+Package Value: (E.g., $2000)
+
+Extra Person Rate per Night:
+
+Adult:
+
+Teenage:
+
+Child:
+
+6. 💰 ROOM / VILLA RATE
+(Repeat for each rate)
+
+Resort Name:
+
+Ban Countries: (If any)
+
+Room Type:
+
+Rate Period - From:
+
+Rate Period - To:
+
+Rate Based On: (Per Room Per Night / Per Person Per Day)
+
+Room Rate:
+
+Extra Person Rate:
+
+Adult:
+
+Teenage:
+
+Child:
+
+⚠️ Special Notes
+Honeymoon, Anniversary & Birthday Benefits must only be listed as part of a package if they are found within the package document. If they are only found in the main contract, do not list them as part of the package.
+
+Repeatable fields (villas, transfers, packages) must be listed individually, not combined.
+
+Do not generate any CSV or structured data until you receive the command: “Let’s structure this resort”, and then wait again until you are told: “Provide CSV”.
+
         """
         if not extracted_data:
             return pd.DataFrame()
@@ -207,34 +460,277 @@ class DocumentDataExtractor:
             
             # Default system prompt
             system_prompt = custom_prompt or """
-            You are an expert data analyst. Analyze the provided document data extracted by Landing AI and create a structured CSV format.
-            
-            Your task:
-            1. Analyze all the extracted document data
-            2. Identify common fields and patterns across documents
-            3. Create a consistent CSV structure with appropriate column headers
-            4. Extract and organize the most relevant information
-            5. Handle missing data appropriately
-            6. Return the data in a JSON format that can be easily converted to CSV
-            
-            Focus on extracting:
-            - Document metadata (file name, type, etc.)
-            - Key entities (names, dates, amounts, addresses, etc.)
-            - Important information from the markdown content
-            - Any structured data
-            
-            Return a JSON array where each object represents a row in the CSV.
-            Make sure all objects have the same keys (columns).
+You will be given official resort documents one by one. There are usually 3–6 documents per resort.
+
+There are two types of documents:
+
+Main Contract – Contains the core resort information, room details, meal plans, transfers, and general policies.
+
+Package Document(s) – Contain special promotional packages and exclusive offers. These are only available to us and will be highlighted on our platform. This is the primary source for package details and rates.
+
+🟡 Document Handling Rules
+Wait until I say: “Let’s structure this resort” — only then should you extract and structure the data.
+
+Do not summarize, reword, or paraphrase — extract all content exactly as written.
+
+Maintain correct casing and punctuation from the documents.
+
+If information is missing, mark it as: Not specified.
+
+All data must be presented section by section, exactly in the format and field naming below.
+
+Do not generate the CSV until I say: “Provide CSV”.
+Once I say that, then:
+
+Then break the message clearly with something like:
+➡️ Now Generating CSV...
+
+Then generate the CSV based on the structured data.
+
+Each CSV section should be separate, as follows:
+
+1. Resort_Details.csv – one row per resort.
+2. Villas_Rooms.csv – one row per villa/room per resort.
+3. Meal_Plans.csv – one row per meal plan per resort.
+4. Transfers.csv – one row per transfer per resort.
+5. Packages.csv – one row per package per resort.
+6. Room_Rates.csv – one row per rate entry per room per resort.
+
+🧾 Resort Data Format to Follow
+1. 🏝 RESORT DETAILS
+Resort Name: (ALL CAPS. If it’s a package, append ‘- PACKAGE’. Shorten only if it exceeds 40 characters.)
+
+Resort Legal Name: (CamelCase)
+
+Atoll:
+
+Star Category:
+
+Offer Type: (Keep this field for all resorts)
+
+Resort Category: (Island Resort / City Hotel / Guest House)
+
+Board Type: (Select the lowest meal board type provided by the resort, in this order. If not found, write 'Not specified')
+
+markdown
+Copy
+Edit
+1. Bed and breakfast (B/B)  
+2. Half board (H/B)  
+3. HB plus  
+4. Full board (F/B)  
+5. Fb plus  
+6. Soft All Inclusive  
+7. Basic All Inclusive  
+8. Classic All Inclusive  
+9. Al Gold  
+10. Al plus  
+11. Premium All Inclusive  
+12. Platinum All Inclusive  
+13. Deluxe all inclusive  
+14. Extreme all inclusive  
+15. Serenity plan  
+16. Reserve plan  
+17. Lobi plan  
+18. Velassaru Indulgence  
+19. The Milaidhoo Gourmet Plan  
+20. Pure indulgence  
+21. Indulgence plan  
+22. Varu plan  
+23. Kanifushi plan  
+24. Fushi Plan  
+25. RAAYA Plan  
+26. Experience  
+27. Anything Anytime Anywhere  
+Marketplace: (Select from: Australia, Eastern Europe / CIS, Europe, Russia, Middle East, Africa, Asia, South America. If only a region is mentioned, assign ‘All’ countries under that region. If specific countries are listed, mention them.)
+
+Booking Period - From: (Format: DD/MM/YYYY)
+
+Booking Period - To: (Format: DD/MM/YYYY)
+
+Age Definition:
+
+Teenage From Age:
+
+Child From Age: (If Infants are 0–1.99, Child From Age should be 2)
+
+Early Check-In Cost: 0
+
+Late Check-Out Cost: 0
+
+Resort Details (Intro): (Limit to 3000 characters. Remove unnecessary repetition or generic text if longer.)
+
+Resort Terms and Conditions: (Limit to 3000 characters)
+
+Resort Cancellation Policy: (Limit to 3000 characters)
+
+Other Additional Information:
+
+2. 🛏 ROOM / VILLA DETAILS
+(Repeat for each room/villa)
+
+Resort Name:
+
+Room Type:
+
+No of Rooms / Villas:
+
+Room / Villa Category:
+
+Basic Occupancy Count:
+
+Adult:
+
+Teenage:
+
+Child:
+
+Maximum Occupancy (Including Basic):
+
+Room Size (sqm):
+
+Minimum Stay (Nights):
+
+Bed Type:
+
+Bed Count:
+
+Room / Villa Description:
+
+Facilities Provided:
+
+Room Terms and Conditions:
+
+3. 🍽 MEAL PLAN
+(Repeat for each meal plan)
+
+Resort Name:
+
+Meal Plan:
+
+Cost for Adult:
+
+Cost for Child:
+
+Meal Plan Inclusion Details:
+
+If Included in a Package: (Mention package names or 'Not included')
+
+4. 🚤 TRANSFER DETAILS
+(Repeat for each transfer type)
+
+Resort Name:
+
+Transfer Name:
+
+Transfer Type: (Select from options like Shared Seaplane, Private Luxury Yacht, etc.)
+
+Valid Travel - From:
+
+Valid Travel - To:
+
+Transfer Cost:
+
+Adult:
+
+Child:
+
+Included in Package(s):
+
+Transfer Terms and Conditions:
+
+5. 🎁 PACKAGE DETAILS
+(Repeat for each package)
+
+Resort Name:
+
+Package Name:
+
+Package Inclusion:
+
+Apply Countries:
+
+Package Period - From:
+
+Package Period - To:
+
+Booking Period - From:
+
+Booking Period - To:
+
+Blackout Periods:
+
+Villa / Room Type:
+
+Stay Duration (Nights):
+
+Basic Occupancy Count:
+
+Adult:
+
+Teenage:
+
+Child:
+
+Maximum Occupancy (Including Basic):
+
+Meal Plan:
+
+Transfer:
+
+Package Cost: (State per room or per person)
+
+Package Value: (E.g., $2000)
+
+Extra Person Rate per Night:
+
+Adult:
+
+Teenage:
+
+Child:
+
+6. 💰 ROOM / VILLA RATE
+(Repeat for each rate)
+
+Resort Name:
+
+Ban Countries: (If any)
+
+Room Type:
+
+Rate Period - From:
+
+Rate Period - To:
+
+Rate Based On: (Per Room Per Night / Per Person Per Day)
+
+Room Rate:
+
+Extra Person Rate:
+
+Adult:
+
+Teenage:
+
+Child:
+
+⚠️ Special Notes
+Honeymoon, Anniversary & Birthday Benefits must only be listed as part of a package if they are found within the package document. If they are only found in the main contract, do not list them as part of the package.
+
+Repeatable fields (villas, transfers, packages) must be listed individually, not combined.
+
+Do not generate any CSV or structured data until you receive the command: “Let’s structure this resort”, and then wait again until you are told: “Provide CSV”.
+
             """
             
             # Prepare the prompt
             user_prompt = f"""
-            Here is the extracted data from {len(documents_summary)} documents:
-            
-            {json.dumps(documents_summary, indent=2)}
-            
-            Please analyze this data and return a structured JSON array suitable for CSV conversion.
-            Ensure consistent column names across all rows.
+Let's structure this resort data. Here is the extracted data from {len(documents_summary)} documents:
+
+{json.dumps(documents_summary, indent=2)}
+
+Provide CSV data now. Extract package information and return ONLY the CSV content with the exact headers specified in the system prompt.
             """
             
             # Combine system and user prompts
@@ -246,20 +742,37 @@ class DocumentDataExtractor:
             # Parse the AI response
             ai_response = response.text
             
-            # Try to extract JSON from the response
-            json_start = ai_response.find('[')
-            json_end = ai_response.rfind(']') + 1
+            # Try to extract CSV from the response
+            # Look for CSV content (should start with headers)
+            lines = ai_response.strip().split('\n')
+            csv_lines = []
             
-            if json_start != -1 and json_end != -1:
-                json_data = ai_response[json_start:json_end]
-                structured_data = json.loads(json_data)
-                
-                # Convert to DataFrame
-                df = pd.DataFrame(structured_data)
+            # Find the start of CSV data (look for line with commas that could be headers)
+            csv_started = False
+            for line in lines:
+                if not csv_started:
+                    # Check if this looks like a CSV header line
+                    if ',' in line and ('Resort Name' in line or 'Package Name' in line):
+                        csv_started = True
+                        csv_lines.append(line)
+                else:
+                    # Continue collecting CSV lines
+                    if ',' in line and line.strip():
+                        csv_lines.append(line)
+                    elif not line.strip():
+                        continue  # Skip empty lines
+                    else:
+                        break  # Stop at non-CSV content
+            
+            if csv_lines:
+                # Create DataFrame from CSV lines
+                from io import StringIO
+                csv_content = '\n'.join(csv_lines)
+                df = pd.read_csv(StringIO(csv_content))
                 self.logger.info(f"Generated CSV data with Google AI: {len(df)} rows and {len(df.columns)} columns")
                 return df
             else:
-                self.logger.error("Could not extract valid JSON from Google AI response")
+                self.logger.error("Could not extract valid CSV from Google AI response")
                 return self._create_structured_dataframe(extracted_data)
                 
         except Exception as e:
@@ -381,7 +894,7 @@ class DocumentDataExtractor:
             str: Path to the generated CSV file
         """
         if documents_folder is None:
-            documents_folder = os.getenv('DOCUMENTS_FOLDER', 'documents')
+            documents_folder = os.getenv('DOCUMENTS_FOLDER', 'input')
         
         self.logger.info(f"Starting document extraction from: {documents_folder}")
         
