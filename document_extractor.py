@@ -458,9 +458,49 @@ Do not generate any CSV or structured data until you receive the command: “Let
                 }
                 documents_summary.append(summary)
             
-            # Default system prompt
+            # Default system prompt for resort package extraction
             system_prompt = custom_prompt or """
-You will be given official resort documents one by one. There are usually 3–6 documents per resort.
+You are a resort package data extraction specialist. Your task is to extract detailed package information from resort documents and create a comprehensive CSV with one row for each room type, season, and transfer combination.
+
+CRITICAL: Generate ONE CSV with these exact headers (copy exactly):
+Resort Name,Package Name,Package Inclusion,Apply Countries,Package Period - From,Package Period - To,Booking Period - From,Booking Period - To,Blackout Periods,Villa / Room Type,Stay Duration (Nights),Basic Occupancy Count: Adult,Basic Occupancy Count: Teenage,Basic Occupancy Count: Child,Maximum Occupancy (Including Basic),Meal Plan,Transfer,Package Cost,Package Value,Extra Person Rate per Night: Adult,Extra Person Rate per Night: Teenage,Extra Person Rate per Night: Child
+
+EXTRACTION RULES:
+1. Create separate rows for each room/villa type mentioned in the document
+2. Create separate rows for different seasons (Low Season, Shoulder Season, Peak Season, etc.)
+3. Create separate rows for different transfer types (Seaplane, Domestic Flight, etc.)
+4. Extract exact pricing from rate tables
+5. Include detailed package inclusions in the Package Inclusion field
+
+FIELD SPECIFICATIONS:
+- Resort Name: Use exact name from document, add "- PACKAGE" at the end
+- Package Name: Create descriptive name like "3 NIGHTS MIDDLE EAST PACKAGE - [ROOM TYPE] ([TRANSFER TYPE])"
+- Package Inclusion: Include ALL benefits, services, and inclusions mentioned (floating breakfast, shisha, activities, etc.)
+- Apply Countries: Extract the market/countries this package applies to
+- Package Period - From/To: The travel period dates in DD/MM/YYYY format
+- Booking Period - From/To: The booking deadline dates in DD/MM/YYYY format
+- Villa / Room Type: Exact room type name from the rate table
+- Stay Duration (Nights): Number of nights for the package
+- Basic Occupancy Count: Number of adults/teenagers/children included in base rate
+- Meal Plan: Extract meal plan type (Half Board, Full Board, etc.)
+- Transfer: Type of transfer included (Seaplane, Domestic Flight, etc.)
+- Package Cost: Base package price in USD
+- Package Value: Calculated or stated package value
+- Extra Person Rates: Additional charges per night for extra adults/teenagers/children
+
+PRICING EXTRACTION:
+- Look for rate tables with different room types and seasons
+- Extract base package prices for 3-night stays
+- Include transfer costs in the package cost
+- Note any additional person charges
+
+FORMATTING:
+- Use "Not specified" for missing information
+- Use DD/MM/YYYY format for dates
+- Include USD currency amounts as numbers only
+- Be detailed and comprehensive in Package Inclusion field
+
+Return ONLY the CSV content with headers, no additional text.
 
 There are two types of documents:
 
@@ -724,13 +764,52 @@ Do not generate any CSV or structured data until you receive the command: “Let
 
             """
             
-            # Prepare the prompt
+            # Prepare the prompt with a simplified, focused system message
             user_prompt = f"""
-Let's structure this resort data. Here is the extracted data from {len(documents_summary)} documents:
+You are processing resort package data. From the document data below, create a CSV with these exact headers:
+Resort Name,Package Name,Package Inclusion,Apply Countries,Package Period - From,Package Period - To,Booking Period - From,Booking Period - To,Blackout Periods,Villa / Room Type,Stay Duration (Nights),Basic Occupancy Count: Adult,Basic Occupancy Count: Teenage,Basic Occupancy Count: Child,Maximum Occupancy (Including Basic),Meal Plan,Transfer,Package Cost,Package Value,Extra Person Rate per Night: Adult,Extra Person Rate per Night: Teenage,Extra Person Rate per Night: Child
 
+CRITICAL: I need 52 separate rows total:
+- 26 rows for Seaplane transfer (13 room types × 2 seasons)  
+- 26 rows for Domestic Flight + Speedboat transfer (13 room types × 2 seasons)
+
+Room types from the tables:
+1. Beach Villa
+2. Deluxe Beach Villa  
+3. Beach Pool Villa
+4. Deluxe Beach Pool Villa
+5. Over Water Pool Villa
+6. Deluxe Over Water Pool Villa
+7. Family Beach Pool Villa
+8. Deluxe Family Beach Pool Villa
+9. One Bedroom Ocean Pool Pavilion
+10. One Bedroom Beach Pool Pavilion
+11. Two Bedroom Ocean Pool Pavilion
+12. Two Bedroom Beach Pool Pavilion
+13. Three Bedroom Beach Pool Pavilion
+
+Seasons:
+- Low Season: 01 AUG – 30 SEPT 2025
+- Shoulder Season: 01 OCT – 22 DEC 2025
+
+For each row, fill these fields:
+- Resort Name: "NIYAMA PRIVATE ISLANDS MALDIVES - PACKAGE"
+- Package Name: "3 NIGHTS MIDDLE EAST PACKAGE - [ROOM TYPE] ([TRANSFER TYPE])"
+- Package Cost: Use exact price from table (USD X,XXX format)
+- Transfer: "Seaplane" or "Domestic Flight + Speedboat"
+- Villa / Room Type: Exact room name from table
+- Package Period - From: "01/08/2025" for Low Season, "01/10/2025" for Shoulder Season
+- Package Period - To: "30/09/2025" for Low Season, "22/12/2025" for Shoulder Season
+- Apply Countries: "Middle East & GCC Market"
+- Stay Duration (Nights): "3"
+- Basic Occupancy Count: Adult: "2"
+- Package Inclusion: "Accommodation, Half Board (Breakfast & Dinner), Return Transfer, Resort Activities"
+- Meal Plan: "Half Board"
+
+Document data:
 {json.dumps(documents_summary, indent=2)}
 
-Provide CSV data now. Extract package information and return ONLY the CSV content with the exact headers specified in the system prompt.
+Return ONLY the CSV data with headers, no other text.
             """
             
             # Combine system and user prompts
